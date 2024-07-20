@@ -24,23 +24,27 @@ def start_client_tcp():
     # Conecta ao servidor
     client_socket.connect(server_address)
     
-    while True:
-        # Envia dados a cada TAXA_AQ segundos
-        time.sleep(TAXA_AQ)
-        tsp_mutex.acquire()
-        message = str(T_SP)
-        tsp_mutex.release()
+    try:
+        while True:
+            # Envia dados a cada TAXA_AQ segundos
+            time.sleep(TAXA_AQ)
+            tsp_mutex.acquire()
+            message = str(T_SP)
+            tsp_mutex.release()
 
-        client_socket.sendall(message.encode())
-        
-        # Aguarda resposta
-        data = client_socket.recv(32).decode()[1:-1] # recebe como string sem os parenteses tira os parenteses
-        data_treated = tuple(map(float, data.split(', ')))
+            client_socket.sendall(message.encode())
+            
+            # Aguarda resposta
+            data = client_socket.recv(32).decode()[1:-1] # recebe como string sem os parenteses tira os parenteses
+            data_treated = tuple(map(float, data.split(', ')))
 
-        tq_mutex.acquire()
-        T = data_treated[0]
-        Q = data_treated[1]
-        tq_mutex.release()
+            tq_mutex.acquire()
+            T = data_treated[0]
+            Q = data_treated[1]
+            tq_mutex.release()
+    except (socket.error, Exception) as e:
+        print(f"Conexão encerrada: {e}")
+
 
 if __name__ == "__main__":
     tsp_mutex = th.Lock()
@@ -49,10 +53,8 @@ if __name__ == "__main__":
     tcp_thread = th.Thread(target=start_client_tcp)
     tcp_thread.start()
 
-    while True:
-        time.sleep(TAXA_SHOW)
-        tq_mutex.acquire()
-        print(f"T: {T}\t\tQ: {Q}")
-        tq_mutex.release()
+    tcp_thread.join()
+
+    print("Programa SCADA encerrado.")
 
     

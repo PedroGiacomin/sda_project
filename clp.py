@@ -104,4 +104,4 @@ if __name__ == "__main__":
     tcp_thread.join()
     opc_thread.join()
 
-    print("Programa encerrado...")
+    print("Programa encerrado.")
