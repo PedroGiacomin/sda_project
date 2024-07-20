@@ -33,18 +33,14 @@ def start_client_tcp():
 
         client_socket.sendall(message.encode())
         
-        # # Aguarda a resposta
-        # amount_received = 0
-        # amount_expected = len(str(T,Q))
-        
-        # while amount_received < amount_expected:
-        data = client_socket.recv(32)
-        #amount_received += len(data)
+        # Aguarda resposta
+        data = client_socket.recv(32).decode()[1:-1] # recebe como string sem os parenteses tira os parenteses
+        data_treated = tuple(map(float, data.split(', ')))
+
         tq_mutex.acquire()
-        T = tuple(data.decode())[0]
-        Q = tuple(data.decode())[1]
+        T = data_treated[0]
+        Q = data_treated[1]
         tq_mutex.release()
-        # print(f"Recebido: {data.decode()}")
 
 if __name__ == "__main__":
     tsp_mutex = th.Lock()

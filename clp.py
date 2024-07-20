@@ -1,11 +1,49 @@
 import socket
 import time 
+import selectors as sel
 import threading as th
 
-# Variaveis pelas quais as threads trocam informacoes
+PORT = 1919
+HOST = 'localhost'
+
+# Variaveis trocadas
 T_SP = 0
 T = 2.1
 Q = 8.3
+
+# Funcao Callback para aceitar conexao do cliente TCP
+def accept(sock):
+    conn, addr = sock.accept()  # Aceita a conexão
+    print(f"Conexão aceita de {addr}")
+    conn.setblocking(False)
+    selec.register(conn, sel.EVENT_READ, readTCP)
+
+# Funcao Callback para ler dados do socket TCP
+def readTCP(conn):
+    global Q, T, T_SP
+    try:
+        # Recebe T_SP do SCADA e retorna T,Q
+        data = conn.recv(32)  
+        tsp_mutex.acquire()
+        T_SP = data.decode()
+        tsp_mutex.release()
+        
+        tq_mutex.acquire()
+        message = str((T, Q))
+        tq_mutex.release()
+
+        if data:
+            print(f"Recebido: {data.decode()}")
+            conn.sendall(message.encode()) 
+        else:
+            print("Conexão fechada pelo cliente")
+            selec.unregister(conn)
+            conn.close()
+
+    except Exception as e:
+        print(f"Erro ao ler dados: {e}")
+        selec.unregister(conn)
+        conn.close()
 
 # Thread ClientOPC
 def start_client_opc():
@@ -18,55 +56,36 @@ def start_client_opc():
 # Thread ServerTCP
 def start_server_tcp():
     global Q, T, T_SP
-    # Cria um socket TCP/IP
+    server_address = (HOST, PORT)
+
+    # Cria um socket TCP/IP nao bloqueante e configura na porta certa
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    
-    # Define o endereço e a porta do servidor e faz bind
-    server_address = ('localhost', 1919)
+    server_socket.setblocking(False)
     server_socket.bind(server_address)
+    server_socket.listen(1)
+    print(f"Servidor ouvindo em {server_address[0]} na porta {server_address[1]}...")
     
     # Habilita o servidor para aceitar conexões
-    server_socket.listen(1)
-    print(f"Servidor ouvindo em {server_address[0]} na porta {server_address[1]}")
+    selec.register(server_socket, sel.EVENT_READ, accept)
+    print("Aguardando conexão...")
     
     # Aguarda conexoes
-    while True:
-        print("Aguardando conexão...")
-
-        # Aceita a conexão
-        connection, client_address = server_socket.accept()
-        try:
-            print(f"Conexão estabelecida com {client_address}")
-
-            while True:
-                # Recebe os dados de T_SP e guarda na variavel
-                data = connection.recv(32)
-                tsp_mutex.acquire()
-                T_SP = data.decode()
-                tsp_mutex.release()
-                
-                tq_mutex.acquire()
-                message = str((T, Q))
-                tq_mutex.release()
-
-                if data:
-                    # Envia os dados de volta para o cliente
-                    connection.sendall(message.encode())
-                else:
-                    print("Nenhum dado recebido, encerrando a conexão")
-                    break
-        finally:
-            # Fecha a conexão
-            connection.close()
+    while not stop_event.is_set():
+        events = selec.select(timeout=1)
+        for key, mask in events:
+            callback = key.data
+            callback(key.fileobj)
     
-        print("Finalizando thread ServerTCP...")
+    print("Finalizando thread ServerTCP...")
 
 if __name__ == "__main__":
     
     # Declarando objetos
     stop_event = th.Event()
+    selec = sel.DefaultSelector()
     tsp_mutex = th.Lock()
     tq_mutex = th.Lock()
+    tecla_input = ''
 
     # Inicialização das threads
     tcp_thread = th.Thread(target=start_server_tcp)
@@ -74,23 +93,14 @@ if __name__ == "__main__":
     tcp_thread.start()
     opc_thread.start()
 
-    while True:
-        time.sleep(3)
-        tsp_mutex.acquire()
-        print(f"SetPoint: {T_SP}")
-        tsp_mutex.release()
     # Aguarda comando para encerrar o programa
-    # tecla = input()
-    # print(tecla)
-    # while tecla != 'q':
-    #     tecla = input()
-    #     print(tecla)
+    try:
+        while tecla_input != 'q': 
+            tecla_input = input()
+    except KeyboardInterrupt:
+        print("Encerrando programa...")
+        stop_event.set()
     
-    print("Encerrando programa...")
-
-    stop_event.set()
-    stop_event.set()
-
     tcp_thread.join()
     opc_thread.join()
 
