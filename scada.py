@@ -15,6 +15,10 @@ Q = 9.1
 def start_client_tcp():
     global Q, T, T_SP
 
+    # Inicializa o arquivo txt
+    with open('historiador.txt', 'w') as file:
+        file.write("")
+
     # Cria um socket TCP/IP
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     
