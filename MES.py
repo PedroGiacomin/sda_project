@@ -4,11 +4,11 @@ import threading
 import keyboard
 from opcua.ua import AttributeIds
 import matplotlib.pyplot as plt
-import seaborn as sns
-sns.set()
+# import seaborn as sns
+# sns.set()
 
 # Cria o client
-client = Client("opc.tcp://DESKTOP-M6O8D4H:53530/OPCUA/SimulationServer")
+client = Client("opc.tcp://ULTRON:53530/OPCUA/SimulationServer")
 client.connect()
 
 # Obtém as variáveis do servidor

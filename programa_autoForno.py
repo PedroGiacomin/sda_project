@@ -2,11 +2,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import threading
 import time
-import seaborn as sns
+#import seaborn as sns
 import keyboard  # Biblioteca para capturar eventos de teclado
 from opcua import Client
 
-sns.set()
+#sns.set()
 
 # Parâmetros do forno
 C_m = 1000  # Capacidade térmica (J/K)
@@ -32,7 +32,7 @@ temperaturas = []
 fim = False
 
 # Cria o client
-client = Client("opc.tcp://DESKTOP-M6O8D4H:53530/OPCUA/SimulationServer")
+client = Client("opc.tcp://ULTRON:53530/OPCUA/SimulationServer")
 client.connect()
 
 T = client.get_node("ns=3;i=1008")
