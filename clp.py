@@ -1,3 +1,4 @@
+from opcua import Client
 import socket
 import time 
 import selectors as sel
@@ -6,11 +7,13 @@ import subprocess as subp
 
 PORT = 1919
 HOST = 'localhost'
+HOST_OPC = "opc.tcp://ULTRON:53530/OPCUA/SimulationServer"
+TAXA_SCADA = 1
 
 # Variaveis trocadas
 T_SP = 0
-T = 2.1
-Q = 8.3
+T = 0.0
+Q = 0.0
 
 # Funcao Callback para aceitar conexao do cliente TCP
 def accept(sock):
@@ -24,7 +27,7 @@ def readTCP(conn):
     global Q, T, T_SP
     try:
         # Recebe T_SP do SCADA e retorna T,Q
-        data = conn.recv(32)  
+        data = conn.recv(64)  
         tsp_mutex.acquire()
         T_SP = data.decode()
         tsp_mutex.release()
@@ -48,15 +51,28 @@ def readTCP(conn):
 
 # Thread ClientOPC
 def start_client_opc():
+    global T,Q
+    # Seta o cliente OPC
+    client = Client(HOST_OPC)
+    client.connect()
+
+    # Obtém as variáveis do servidor
+    T_aux = client.get_node("ns=3;i=1008")
+    Q_aux = client.get_node("ns=3;i=1009")
+
+    # Atualiza os dados de T e Q a cada 1s para o SCADA
     while not stop_event.is_set():
-        #print("Running")
-        time.sleep(2)
+        tq_mutex.acquire()
+        T = T_aux.get_value()
+        Q = Q_aux.get_value()
+        tq_mutex.release()
+        
+        time.sleep(TAXA_SCADA)
     
     print("Finalizando thread ClienteOPC...")
 
 # Thread ServerTCP
 def start_server_tcp():
-    global Q, T, T_SP
     server_address = (HOST, PORT)
 
     # Cria um socket TCP/IP nao bloqueante e configura na porta certa
@@ -91,12 +107,14 @@ if __name__ == "__main__":
     # Inicialização das threads
     tcp_thread = th.Thread(target=start_server_tcp)
     opc_thread = th.Thread(target=start_client_opc)
-    tcp_thread.start()
     opc_thread.start()
+    tcp_thread.start()
+    
 
     # Aguarda comando para encerrar o programa
     try:
         while tecla_input != 'q': 
+            #print(T, " ", Q)
             tecla_input = input()
     except KeyboardInterrupt:
         print("Encerrando programa...")

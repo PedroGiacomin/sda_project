@@ -8,8 +8,8 @@ HOST = 'localhost'
 TAXA_SHOW = 3
 TAXA_AQ = 2 # em segundos
 T_SP = 10.0
-T = 11.0
-Q = 9.1
+T = 0.0
+Q = 0.0
 
 # O clienteTCP envia apenas um set_point float
 def start_client_tcp():
@@ -41,19 +41,18 @@ def start_client_tcp():
             client_socket.sendall(message.encode())
             
             # Aguarda resposta
-            data = client_socket.recv(32).decode()[1:-1] # recebe como string sem os parenteses tira os parenteses
+            data = client_socket.recv(64).decode()[1:-1] # recebe como string sem os parenteses tira os parenteses
+            print(data)
             data_treated = tuple(map(float, data.split(', ')))
 
             # Escreve no arquivo txt
             hora_atual = time.strftime("%d/%m/%Y %H:%M:%S", time.localtime())
-            tq_mutex.acquire()
             
+            tq_mutex.acquire()
             T = data_treated[0]
             Q = data_treated[1]
-
             with open('historiador.txt', 'a') as file:
                 file.write(f"{hora_atual} \t T: {T} \t Q: {Q}\n")
-
             tq_mutex.release()
     except (socket.error, Exception) as e:
         print(f"Conexão encerrada: {e}")
