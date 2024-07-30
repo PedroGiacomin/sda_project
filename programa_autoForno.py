@@ -1,12 +1,12 @@
 import numpy as np
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import threading
 import time
 import seaborn as sns
 import keyboard  # Biblioteca para capturar eventos de teclado
 from opcua import Client
-
-sns.set()
+import config
+import signal
 
 # Parâmetros do forno
 C_m = 1000  # Capacidade térmica (J/K)
@@ -28,15 +28,15 @@ erro_anterior = 0         # Erro anterior para o componente derivativo
 tempo = []
 temperaturas = []
 
-# Variável para sinalizar término das threads
-fim = False
+# Evento para sinalizar término das threads
+stop_event = threading.Event()
 
 # Cria o client
-client = Client("opc.tcp://DESKTOP-M6O8D4H:53530/OPCUA/SimulationServer")
+client = Client(config.SERVER_ADDRESS)
 client.connect()
 
-T = client.get_node("ns=3;i=1008")
-Q = client.get_node("ns=3;i=1009")
+T = client.get_node(config.T_CONFIG)
+Q = client.get_node(config.Q_CONFIG)
 
 def derivada_temperatura(T, Q):
     dTdt = (Q / C_m) - ((T - T_amb) / R)
@@ -64,46 +64,45 @@ def simular_alto_forno(T_inicial, tempo_total, dt, fluxo_calor):
 lock = threading.Lock()
 
 def thread_auto_forno():
-    global temperatura_atual, fluxo_calor_atual, fim, tempo, temperaturas
+    global temperatura_atual, fluxo_calor_atual, tempo, temperaturas
     dt = 1.0  # Passo de tempo da simulação (s)
     tempo_total = 1.0  # Tempo total de simulação (s) por iteração
     num_pontos = int(tempo_total/dt) + 1
     t = 0  # Tempo inicial
-    while not fim:
-        lock.acquire()
-        fluxo_calor = np.full(num_pontos, fluxo_calor_atual)
-        tempo_sim, temperatura = simular_alto_forno(temperatura_atual, tempo_total, dt, fluxo_calor)
+    
+    while not stop_event.is_set():
+        with lock:
+            fluxo_calor = np.full(num_pontos, fluxo_calor_atual)
+            tempo_sim, temperatura = simular_alto_forno(temperatura_atual, tempo_total, dt, fluxo_calor)
         temperatura_atual = temperatura[-1]
         tempo.append(t)
         temperaturas.append(temperatura_atual)
         t += dt
-        T.set_value(temperatura_atual)
-        lock.release()
+        with lock:
+            T.set_value(temperatura_atual)
         time.sleep(1)
 
+
 def thread_controle():
-    global fluxo_calor_atual, integral_erro, erro_anterior, fim
-    while not fim:
-        lock.acquire()
+    global fluxo_calor_atual, integral_erro, erro_anterior
+
+    while not stop_event.is_set():
         erro = T_ref - temperatura_atual
         integral_erro += erro * Ts 
         derivativo_erro = (erro - erro_anterior) / Ts  
-        fluxo_calor_atual = K_p * erro + K_i * integral_erro + K_d * derivativo_erro
+        with lock:
+            fluxo_calor_atual = K_p * erro + K_i * integral_erro + K_d * derivativo_erro
         erro_anterior = erro
-        Q.set_value(fluxo_calor_atual)
-        lock.release()
+        with lock:
+            Q.set_value(fluxo_calor_atual)
         time.sleep(0.5)
     
 
 def thread_verificar_tecla():
-    global fim
-    while True:
-        with lock:
-            if keyboard.is_pressed('f'):
-                fim = True
-                print("Encerrando programa...")
-                break
-        time.sleep(0.1)
+
+    while not stop_event.is_set():
+        tecla_input = input("Pressione qualquer tecla para encerrar: ")
+        stop_event.set()
 
 # Criar e iniciar as threads
 t1 = threading.Thread(target=thread_auto_forno)
@@ -122,11 +121,14 @@ t1.join()
 t2.join()
 
 # Plotar os resultados
-plt.figure(figsize=(10, 6))
-plt.plot(tempo, temperaturas, label='Temperatura no alto-forno')
-plt.xlabel('Tempo (s)')
-plt.ylabel('Temperatura (°C)')
-plt.title('Simulação da Dinâmica de um Alto-Forno')
-plt.legend()
-plt.grid(True)
-plt.show()
+# plt.figure(figsize=(10, 6))
+# plt.plot(tempo, temperaturas, label='Temperatura no alto-forno')
+# plt.xlabel('Tempo (s)')
+# plt.ylabel('Temperatura (°C)')
+# plt.title('Simulação da Dinâmica de um Alto-Forno')
+# plt.legend()
+# plt.grid(True)
+# plt.show()
+
+client.disconnect()
+print("Todas as threads foram encerradas, programa finalizado")
