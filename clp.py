@@ -3,7 +3,8 @@ import socket
 import time 
 import selectors as sel
 import threading as th
-import subprocess as subp
+import signal
+import config
 
 PORT = 1919
 HOST = 'localhost'
@@ -14,6 +15,11 @@ TAXA_SCADA = 1
 T_SP = 0
 T = 0.0
 Q = 0.0
+
+def signal_handler(signum, frame):
+    print("HANDLER CLP")
+
+signal.signal(signal.SIGINT, signal_handler)
 
 # Funcao Callback para aceitar conexao do cliente TCP
 def accept(sock):
@@ -37,7 +43,7 @@ def readTCP(conn):
         tq_mutex.release()
 
         if data:
-            print(f"Recebido: {data.decode()}")
+            # print(f"Recebido: {data.decode()}")
             conn.sendall(message.encode()) 
         else:
             print("Conexão fechada pelo cliente")
@@ -51,14 +57,15 @@ def readTCP(conn):
 
 # Thread ClientOPC
 def start_client_opc():
-    global T,Q
+    global T, Q, T_SP
     # Seta o cliente OPC
     client = Client(HOST_OPC)
     client.connect()
 
     # Obtém as variáveis do servidor
-    T_aux = client.get_node("ns=3;i=1008")
-    Q_aux = client.get_node("ns=3;i=1009")
+    T_aux = client.get_node(config.T_CONFIG)
+    Q_aux = client.get_node(config.Q_CONFIG)
+    TSP_aux = client.get_node(config.TSP_CONFIG)
 
     # Atualiza os dados de T e Q a cada 1s para o SCADA
     while not stop_event.is_set():
@@ -66,6 +73,10 @@ def start_client_opc():
         T = T_aux.get_value()
         Q = Q_aux.get_value()
         tq_mutex.release()
+
+        tsp_mutex.acquire()
+        TSP_aux.set_value(T_SP)
+        tsp_mutex.release()
         
         time.sleep(TAXA_SCADA)
     
@@ -96,29 +107,19 @@ def start_server_tcp():
     print("Finalizando thread ServerTCP...")
 
 if __name__ == "__main__":
-    
+    print(" ----------------- PROGRAMA CLP -----------------")
+
     # Declarando objetos
     stop_event = th.Event()
     selec = sel.DefaultSelector()
     tsp_mutex = th.Lock()
     tq_mutex = th.Lock()
-    tecla_input = ''
 
     # Inicialização das threads
     tcp_thread = th.Thread(target=start_server_tcp)
     opc_thread = th.Thread(target=start_client_opc)
     opc_thread.start()
     tcp_thread.start()
-    
-
-    # Aguarda comando para encerrar o programa
-    try:
-        while tecla_input != 'q': 
-            #print(T, " ", Q)
-            tecla_input = input()
-    except KeyboardInterrupt:
-        print("Encerrando programa...")
-        stop_event.set()
     
     tcp_thread.join()
     opc_thread.join()

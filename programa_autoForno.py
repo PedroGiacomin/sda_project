@@ -37,6 +37,7 @@ client.connect()
 
 T = client.get_node(config.T_CONFIG)
 Q = client.get_node(config.Q_CONFIG)
+T_SP = client.get_node(config.TSP_CONFIG)
 
 def derivada_temperatura(T, Q):
     dTdt = (Q / C_m) - ((T - T_amb) / R)
@@ -84,10 +85,10 @@ def thread_auto_forno():
 
 
 def thread_controle():
-    global fluxo_calor_atual, integral_erro, erro_anterior
+    global fluxo_calor_atual, integral_erro, erro_anterior, T_SP
 
     while not stop_event.is_set():
-        erro = T_ref - temperatura_atual
+        erro = float(T_SP.get_value()) - temperatura_atual
         integral_erro += erro * Ts 
         derivativo_erro = (erro - erro_anterior) / Ts  
         with lock:
@@ -95,40 +96,20 @@ def thread_controle():
         erro_anterior = erro
         with lock:
             Q.set_value(fluxo_calor_atual)
+        
         time.sleep(0.5)
-    
 
-def thread_verificar_tecla():
+if __name__ == "__main__":
+    print(" ----------------- PROGRAMA ALTO FORNO -----------------")
 
-    while not stop_event.is_set():
-        tecla_input = input("Pressione qualquer tecla para encerrar: ")
-        stop_event.set()
+    # Criar e iniciar as threads
+    t1 = threading.Thread(target=thread_auto_forno)
+    t2 = threading.Thread(target=thread_controle)
 
-# Criar e iniciar as threads
-t1 = threading.Thread(target=thread_auto_forno)
-t2 = threading.Thread(target=thread_controle)
-t3 = threading.Thread(target=thread_verificar_tecla)
+    t1.start()
+    t2.start()
 
-t1.start()
-t2.start()
-t3.start()
+    t1.join()
+    t2.join()
 
-# Esperar até que a thread de verificação de tecla termine
-t3.join()
-
-# Esperar as outras threads terminarem
-t1.join()
-t2.join()
-
-# Plotar os resultados
-# plt.figure(figsize=(10, 6))
-# plt.plot(tempo, temperaturas, label='Temperatura no alto-forno')
-# plt.xlabel('Tempo (s)')
-# plt.ylabel('Temperatura (°C)')
-# plt.title('Simulação da Dinâmica de um Alto-Forno')
-# plt.legend()
-# plt.grid(True)
-# plt.show()
-
-client.disconnect()
-print("Todas as threads foram encerradas, programa finalizado")
+    print("Todas as threads foram encerradas, programa finalizado")
