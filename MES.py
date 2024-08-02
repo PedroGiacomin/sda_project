@@ -29,7 +29,6 @@ def thread_main():
                 start_time = time.time()
             time.sleep(1)    
     except KeyboardInterrupt:
-        print("DEU CTRL-C MES")
         stop_event.set()
 
 if __name__ == "__main__":

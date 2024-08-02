@@ -35,36 +35,3 @@ try:
         time.sleep(1)
 except KeyboardInterrupt:
     print("Programa encerrado.")
-
-# import subprocess
-# import time
-# import signal
-# import platform
-
-# def signal_handler(signum, frame):
-#     print("HANDLER RUN")
-
-# signal.signal(signal.SIGINT, signal_handler)
-
-# # Executar cada script Python
-# process1 = subprocess.Popen(["python", "programa_autoForno.py"])
-# print("Inicializando processo programa_autoForno.py...")
-# time.sleep(1)
-# process2 = subprocess.Popen(["python", "clp.py"])
-# print("Inicializando processo clp.py...")
-# time.sleep(1)
-# process3 = subprocess.Popen(["python", "scada.py"])
-# print("Inicializando processo scada.py...")
-# time.sleep(1)
-# process4 = subprocess.Popen(["python", "MES.py"])
-# print("Inicializando processo MES.py...")
-
-# time.sleep(3)
-# print("Pressione CTRL-C para encerrar...")
-
-# process1.wait()
-# process2.wait()
-# process3.wait()
-# process4.wait()
-
-# print("Programa encerrado.")

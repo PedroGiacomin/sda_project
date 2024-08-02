@@ -16,11 +16,6 @@ T_SP = 0
 T = 0.0
 Q = 0.0
 
-def signal_handler(signum, frame):
-    print("HANDLER CLP")
-
-signal.signal(signal.SIGINT, signal_handler)
-
 # Funcao Callback para aceitar conexao do cliente TCP
 def accept(sock):
     conn, addr = sock.accept()  # Aceita a conexão
