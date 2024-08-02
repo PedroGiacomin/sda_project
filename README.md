@@ -1,5 +1,7 @@
 # README
 
+Siga as instruções a seguir:
+
 1. Clone os arquivos do repositório sda-project para o seu computador;
 2. Instale o simulador do servidor OPC-UA chamado "Prosys OPC UA Simulation Server", por [esse endereço](https://ddjbcej.r.af.d.sendibt2.com/tr/cl/m-OP38ihvHD-j1gOH_CV6cf1rmgXAUFO-1og4wcyNQCKAirhNK37EVf3VgosmQ2BaOMNnjUP3kzyTEy9PmA32ey7eUSzLN-cazcIm3oI-q2DZMj9hvRfyBvTKqIDTfCsdIyavg1CFLmtrE1OzzOX4LAvvrGZWRA7EEtKQnrMrquA1aDoyTkm8O3N9DvUr9rU8i4usXw7kgaIKb0p4A6tPKxcDrGHh0y5dBG3uQskLkhzHePi8KINOnpsvO8cOrrePsTxeEXqyXMi2ugvtKsv1-gKUkLrnnqDrmjNEicdBHQMc63Ggfh3jDVcXsxK2JvCMXjpe1Mmt5P1ApKH) ou por [esse outro](https://prosysopc.com/products/opc-ua-simulation-server/);
 3. Com o software instalado, o programa deve ser aberto e devem ser criadas 3 novas variáveis numéricas sendo elas T, Q e T_sp.;
