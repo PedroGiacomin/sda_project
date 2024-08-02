@@ -38,6 +38,7 @@ client.connect()
 T = client.get_node(config.T_CONFIG)
 Q = client.get_node(config.Q_CONFIG)
 T_SP = client.get_node(config.TSP_CONFIG)
+T_SP.set_value(250)
 
 def derivada_temperatura(T, Q):
     dTdt = (Q / C_m) - ((T - T_amb) / R)

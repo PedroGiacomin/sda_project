@@ -8,7 +8,7 @@ import config
 
 PORT = 1919
 HOST = 'localhost'
-HOST_OPC = "opc.tcp://ULTRON:53530/OPCUA/SimulationServer"
+HOST_OPC = config.SERVER_ADDRESS
 TAXA_SCADA = 1
 
 # Variaveis trocadas
